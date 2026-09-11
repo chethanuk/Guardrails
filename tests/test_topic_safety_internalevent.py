@@ -43,7 +43,7 @@ async def test_topic_safety_check_input_with_internal_events():
     ]
 
     class MockTaskManager:
-        def render_task_prompt(self, task):
+        def render_task_prompt(self, task, context=None):
             return "Check if the conversation is on topic."
 
         def get_stop_tokens(self, task):
