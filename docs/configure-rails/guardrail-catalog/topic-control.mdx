@@ -89,7 +89,7 @@ response = rails.generate(messages=[
 ])
 ```
 
-Only the variables the prompt references are rendered into it. If a request has no `disallowed_topics`, the variable renders as an empty string ([Jinja undefined values](https://jinja.palletsprojects.com/en/stable/api/#undefined-types)), so keep your static rules in the prompt as well, or set a fallback with the [`default`](https://jinja.palletsprojects.com/en/stable/templates/#jinja-filters.default) filter. A value registered with `register_prompt_context` under the same name takes precedence over the request value.
+Only the variables the prompt references are rendered into it. If a request has no `disallowed_topics`, the variable renders as an empty string ([Jinja undefined values](https://jinja.palletsprojects.com/en/stable/api/#undefined-types)), so keep your static rules in the prompt as well, or set a fallback with the [`default`](https://jinja.palletsprojects.com/en/stable/templates/#jinja-filters.default) filter. A [prompt variable](/configure-guardrails/yaml-schema/prompt-configuration#prompt-variables) registered under the same name takes precedence over the request value, because the library applies registered values after the request context.
 
 ## Implementation Details
 

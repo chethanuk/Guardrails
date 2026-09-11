@@ -148,3 +148,15 @@ def test_off_topic_verdict_with_request_topics_refuses():
     response = chat.app.generate(messages=_messages({"disallowed_topics": ["politics"]}))
 
     assert response["content"] == "I'm sorry, I can't respond to that."
+
+
+def test_registered_prompt_context_wins_over_request_context():
+    """The prompt context is applied after the request context, so it wins on a name clash."""
+    chat, guard = _dynamic_chat(["on-topic"])
+    chat.app.register_prompt_context("disallowed_topics", ["weather"])
+
+    chat.app.generate(messages=_messages({"disallowed_topics": ["politics"]}))
+
+    prompt = _system_prompt(guard, 0)
+    assert "Do not talk about: weather." in prompt
+    assert "politics" not in prompt
