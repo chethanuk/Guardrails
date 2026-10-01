@@ -46,6 +46,10 @@ class MockNVIDIALLM:
     __module__ = "langchain_nvidia_ai_endpoints.chat_models"
 
 
+class MockGoogleGenAILLM(MagicMock):
+    __module__ = "langchain_google_genai.chat_models"
+
+
 class MockCommunityOllama:
     __module__ = "langchain_community.chat_models.ollama"
 
@@ -509,8 +513,8 @@ class TestLangChainFramework:
 
 
 class TestPrepareCallParams:
-    def _make_adapter(self, model_name):
-        mock_llm = MagicMock()
+    def _make_adapter(self, model_name, llm_class=MagicMock):
+        mock_llm = llm_class()
         mock_llm.model_name = model_name
         return LangChainLLMAdapter(mock_llm)
 
@@ -549,6 +553,22 @@ class TestPrepareCallParams:
         adapter = self._make_adapter(model)
         result = adapter._prepare_call_params(stop, kwargs)
         assert result == expected
+
+    @pytest.mark.parametrize(
+        "llm_class,stop,kwargs,expected",
+        [
+            (MockGoogleGenAILLM, None, {"max_tokens": 100}, {"max_output_tokens": 100}),
+            (MockGoogleGenAILLM, None, {"max_tokens": 100, "max_output_tokens": 50}, {"max_output_tokens": 50}),
+            (MockGoogleGenAILLM, None, {"max_tokens": None}, {}),
+            (MockGoogleGenAILLM, ["x"], {"max_tokens": 10}, {"max_output_tokens": 10, "stop": ["x"]}),
+            (MockGoogleGenAILLM, None, {"max_output_tokens": 7}, {"max_output_tokens": 7}),
+            (MagicMock, None, {"max_tokens": 100}, {"max_tokens": 100}),
+        ],
+        ids=["rename", "explicit_wins", "none_dropped", "with_stop", "already_native", "other_provider"],
+    )
+    def test_google_genai_max_tokens_renamed(self, llm_class, stop, kwargs, expected):
+        adapter = self._make_adapter("gemini-2.5-flash", llm_class)
+        assert adapter._prepare_call_params(stop, kwargs) == expected
 
     def test_does_not_modify_original_kwargs(self):
         adapter = self._make_adapter("o1-preview")
