@@ -17,10 +17,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from nemoguardrails import RailsConfig
 from nemoguardrails.context import llm_call_info_var, llm_stats_var
 from nemoguardrails.library.topic_safety.actions import topic_safety_check_input
 from nemoguardrails.llm.cache.lfu import LFUCache
 from nemoguardrails.llm.cache.utils import create_normalized_cache_key
+from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.logging.explain import LLMCallInfo
 from nemoguardrails.logging.stats import LLMStats
 from tests.utils import FakeLLMModel
@@ -161,3 +163,32 @@ async def test_topic_safety_without_cache(fake_llm_topic, mock_task_manager):
     )
 
     assert result.is_blocked is False
+
+
+@pytest.mark.asyncio
+async def test_cached_verdict_is_not_reused_when_request_topics_change():
+    config = RailsConfig.from_content(
+        yaml_content="""
+        models: []
+        prompts:
+          - task: topic_safety_check_input $model=test_model
+            content: 'Do not talk about: {{ disallowed_topics | join(", ") }}.'
+        """
+    )
+    cache = LFUCache(maxsize=10)
+    llms = {"test_model": FakeLLMModel(responses=["on-topic", "off-topic"])}
+
+    is_blocked = []
+    for topics in (["cooking"], ["politics"]):
+        result = await topic_safety_check_input(
+            llms=llms,
+            llm_task_manager=LLMTaskManager(config),
+            model_name="test_model",
+            context={"user_message": "Tell me about elections.", "disallowed_topics": topics},
+            events=[],
+            model_caches={"test_model": cache},
+        )
+        is_blocked.append(result.is_blocked)
+
+    assert is_blocked == [False, True]
+    assert cache.size() == 2

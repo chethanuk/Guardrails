@@ -70,6 +70,29 @@ prompts:
       - Your responses should be professional, accurate, and compliant with customer relations guidelines, focusing solely on providing transparent, up-to-date information about the company that is already publicly available.
 ```
 
+## Passing Topics at Request Time
+
+To change the rules per request without editing the configuration, reference a [context variable](/configure-guardrails/yaml-schema/prompt-configuration#context-variables) in the prompt and send its value in a `context` message:
+
+```yaml
+prompts:
+  - task: topic_safety_check_input $model=topic_control
+    content: |
+      Guidelines for the user messages:
+      - Do not answer questions about: {{ disallowed_topics | join(", ") }}
+```
+
+```python
+response = rails.generate(messages=[
+    {"role": "context", "content": {"disallowed_topics": ["politics", "self-harm"]}},
+    {"role": "user", "content": "What do you think about the election?"},
+])
+```
+
+Only the variables the prompt references are rendered into it. If a request has no `disallowed_topics`, the variable renders as an empty string ([Jinja undefined values](https://jinja.palletsprojects.com/en/stable/api/#undefined-types)), so keep your static rules in the prompt as well, or set a fallback with the [`default`](https://jinja.palletsprojects.com/en/stable/templates/#jinja-filters.default) filter. A [prompt variable](/configure-guardrails/yaml-schema/prompt-configuration#prompt-variables) registered under the same name takes precedence over the request value, because the library applies registered values after the request context.
+
+Request-time context variables reach the prompt only when the rail runs through `LLMRails`. The `IORails` topic safety rail passes the action only `user_message`, so these variables render as empty strings there. Do not reference context keys that hold end-user text in this prompt, because the value becomes part of the system prompt of the topic control model.
+
 ## Implementation Details
 
 The 'topic safety check input' flow uses the [`topic_safety_check_input`](https://github.com/NVIDIA-NeMo/Guardrails/blob/develop/nemoguardrails/library/topic_safety/actions.py) action. The model returns a boolean value indicating whether the user input is on-topic or not. Please refer to the [topic safety example](https://github.com/NVIDIA-NeMo/Guardrails/tree/develop/examples/configs/topic_safety/README.md) for more details.
