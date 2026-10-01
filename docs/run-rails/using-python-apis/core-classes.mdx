@@ -273,6 +273,8 @@ async def stream_response():
         print(chunk, end="", flush=True)
 ```
 
+Pass `include_metadata=True` to receive dictionary chunks with provider metadata and token usage instead of plain strings. Refer to [Streaming Metadata](/run-guardrailed-inference/using-python-apis/streaming#streaming-metadata).
+
 For detailed streaming configuration, refer to [Streaming](/run-guardrailed-inference/using-python-apis/streaming).
 
 ### Event-based Generation
