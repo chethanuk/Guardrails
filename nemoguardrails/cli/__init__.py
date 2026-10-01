@@ -355,6 +355,55 @@ def find_providers(
         typer.echo("No provider selected.")
 
 
+@app.command()
+def validate(
+    config: str = typer.Argument(..., help="Path to a config directory or a single .yml/.yaml file."),
+):
+    """Validate a guardrails configuration offline.
+
+    Loads the config and checks that each LLM model engine is a registered provider.
+    Makes no network calls and never executes config.py.
+    """
+    import difflib
+
+    from pydantic import ValidationError
+
+    from nemoguardrails.cli.providers import registered_engines
+    from nemoguardrails.rails.llm.config import RailsConfig
+
+    try:
+        rails_config = RailsConfig.from_path(config)
+    except ValidationError as e:
+        for err in e.errors():
+            typer.echo(f"Error: {'.'.join(str(x) for x in err['loc'])}: {err['msg']}")
+        raise typer.Exit(1)
+    except Exception as e:
+        lines = str(e).splitlines()
+        typer.echo(f"Error: {type(e).__name__}: {lines[0] if lines else ''}")
+        raise typer.Exit(1)
+
+    # config.py may register custom providers; it is never executed, so only warn.
+    has_config_py = os.path.isdir(config) and os.path.isfile(os.path.join(config, "config.py"))
+    known = registered_engines()
+    failed = False
+    for model in rails_config.models:
+        # Same non-LLM types that LLMRails skips when building LLMs.
+        if model.type in ("embeddings", "jailbreak_detection") or model.engine in known:
+            continue
+        msg = f"model '{model.type}' uses unknown engine '{model.engine}'"
+        close = difflib.get_close_matches(model.engine, known)
+        if close:
+            msg += f" (did you mean: {', '.join(close)}?)"
+        if has_config_py:
+            typer.echo(f"Warning: {msg} (may be registered in config.py)")
+        else:
+            typer.echo(f"Error: {msg}")
+            failed = True
+    if failed:
+        raise typer.Exit(1)
+    typer.echo("OK")
+
+
 def version_callback(value: bool):
     if value:
         typer.echo(__version__)

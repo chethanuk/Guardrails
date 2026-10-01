@@ -208,3 +208,27 @@ Select provider: openai
 
 Selected text completion provider: openai
 ```
+
+---
+
+<a id="validate-command"></a>
+## `validate`
+
+Validate a guardrails configuration without calling an LLM.
+
+```bash
+nemoguardrails validate <config-path>
+```
+
+`<config-path>` is a configuration directory or a single `.yml`/`.yaml` file.
+
+The command loads the configuration and checks that the `engine` of every LLM model is a registered provider. It makes no network calls, does not construct any client, and never executes `config.py`. A registered engine is not necessarily installed or usable.
+
+- Models of type `embeddings` and `jailbreak_detection` are not checked.
+- If the directory contains a `config.py`, unknown engines are reported as warnings because they may be registered there. Otherwise they are errors.
+- Exit code `0` when valid (prints `OK`), `1` when the configuration cannot be loaded or has an unknown engine.
+
+```text
+$ nemoguardrails validate ./config
+Error: model 'main' uses unknown engine 'opnai' (did you mean: openai?)
+```
