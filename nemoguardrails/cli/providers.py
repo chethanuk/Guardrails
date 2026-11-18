@@ -46,6 +46,13 @@ def _list_providers() -> None:
         console.print(f"  • {provider}")
 
 
+def registered_engines() -> set:
+    """Names of all registered chat and text completion providers."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return set(get_llm_provider_names()) | set(get_chat_provider_names())
+
+
 def _get_provider_completions(
     provider_type: Optional[ProviderType] = None,
 ) -> List[str]:
