@@ -157,6 +157,12 @@ class LangChainLLMAdapter:
         if is_openai_reasoning_model(self.model_name):
             params.pop("temperature", None)
             params.pop("stop", None)
+        if self.provider_name == "google_genai":
+            # langchain-google-genai >= 4 rejects max_tokens; it only accepts max_output_tokens.
+            # An explicit max_output_tokens wins; None is the library default, so drop it.
+            max_tokens = params.pop("max_tokens", None)
+            if max_tokens is not None:
+                params.setdefault("max_output_tokens", max_tokens)
         return params
 
     def _to_langchain_input(self, prompt):
