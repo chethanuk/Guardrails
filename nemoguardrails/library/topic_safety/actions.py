@@ -96,6 +96,7 @@ async def topic_safety_check_input(
 
     system_prompt = llm_task_manager.render_task_prompt(
         task=task,
+        context=context,
     )
 
     system_prompt = system_prompt.strip()
